@@ -39,7 +39,7 @@ function initScene() {
 
 function initCamera() {
     camera = new THREE.PerspectiveCamera(55, width / height, 1, 100);
-    camera.position.set(3, 1, 3);   
+    camera.position.set(12, 8, 12);   
     
     cameraControls = new THREE.OrbitControls(camera, renderer.domElement);    
     cameraControls.noPan = false;
@@ -59,24 +59,24 @@ function initReferenceView() {
 	var lineGeometryX = new THREE.Geometry();	
 	var lineMaterialX = new THREE.LineBasicMaterial({color: "rgb(255, 0, 0)", linewidth: 2});
 
-	lineGeometryX.vertices.push(new THREE.Vector3(-10, 0, 0));
-	lineGeometryX.vertices.push(new THREE.Vector3(10, 0, 0));
+	lineGeometryX.vertices.push(new THREE.Vector3(-15, 0, 0));
+	lineGeometryX.vertices.push(new THREE.Vector3(15, 0, 0));
 
 	scene.add(new THREE.Line(lineGeometryX, lineMaterialX));
 
 	var lineGeometryY = new THREE.Geometry();	
 	var lineMaterialY = new THREE.LineBasicMaterial({color: "rgb(0, 255, 0)", linewidth: 2});
 
-	lineGeometryY.vertices.push(new THREE.Vector3(0, -10, 0));
-	lineGeometryY.vertices.push(new THREE.Vector3(0, 10, 0));
+	lineGeometryY.vertices.push(new THREE.Vector3(0, -15, 0));
+	lineGeometryY.vertices.push(new THREE.Vector3(0, 15, 0));
 
 	scene.add(new THREE.Line(lineGeometryY, lineMaterialY));
 
 	var lineGeometryZ = new THREE.Geometry();	
 	var lineMaterialZ = new THREE.LineBasicMaterial({color: "rgb(0, 0, 255)", linewidth: 2});
 
-	lineGeometryZ.vertices.push(new THREE.Vector3(0, 0, -10));
-	lineGeometryZ.vertices.push(new THREE.Vector3(0, 0, 10));
+	lineGeometryZ.vertices.push(new THREE.Vector3(0, 0, -15));
+	lineGeometryZ.vertices.push(new THREE.Vector3(0, 0, 15));
 
 	scene.add(new THREE.Line(lineGeometryZ, lineMaterialZ));	
 
@@ -108,8 +108,8 @@ function initMVC() {
 	
 	controller = new Controller(modelView);
 	controller.addDatGUI();
-
-	modelView.addToScene(scene);		
+	
+	modelView.update();	
 }
 
 
@@ -120,16 +120,47 @@ function Controller(modelView) {
 	var self = this;
 
 	this.addDatGUI = function() {
+		
 		var gui = new dat.GUI({ autoPlace: false });
 		var controlsContainer = document.getElementById('controls-container');
 		controlsContainer.appendChild(gui.domElement);
 
-		gui.add(self.modelView, 'eccentricity', 0, 1, 0.01).name('e');
-		gui.add(self.modelView, 'semimajorAxis', 6371, 10000, 0.01).name('a');
-		gui.add(self.modelView, 'inclination', -360, 360, 0.01).name('i');
-		gui.add(self.modelView, 'longtitudeAscendingNode', 0, 360, 0.01).name('Omega');
-		gui.add(self.modelView, 'periapsisArgument', 0, 360, 0.01).name('omega');
-		gui.add(self.modelView, 'meanAnomaly', 0, 360, 0.01).name('v');
+		var eccentricityControl = gui.add(self.modelView, 'eccentricity', 0, 0.99, 0.01);
+		eccentricityControl.name('e');
+		eccentricityControl.onChange(function(value) {
+			self.modelView.update();
+		});
+		
+		var semimajorAxisControl = gui.add(self.modelView, 'semimajorAxis', 6.371, 10.000, 0.01);
+		semimajorAxisControl.name('a');
+		semimajorAxisControl.onChange(function(value) {
+			self.modelView.update();
+		});
+		
+		var inclinationControl = gui.add(self.modelView, 'inclination', 0, 180, 0.01);
+		inclinationControl.name('i');
+		inclinationControl.onChange(function(value) {
+			self.modelView.update();
+		});
+
+		var longtitudeAscendingNodeControl = gui.add(self.modelView, 'longtitudeAscendingNode', 0, 360, 0.01);
+		longtitudeAscendingNodeControl.name('Omega');
+		longtitudeAscendingNodeControl.onChange(function(value) {
+			self.modelView.update();
+		});
+
+		var periapsisArgumentControl = gui.add(self.modelView, 'periapsisArgument', 0, 360, 0.01);
+		periapsisArgumentControl.name('omega');
+		periapsisArgumentControl.onChange(function(value) {
+			self.modelView.update();
+		});
+		
+		var meanAnomalyControl = gui.add(self.modelView, 'meanAnomaly', 0, 360, 0.01);
+		meanAnomalyControl.name('v');
+		meanAnomalyControl.onChange(function(value) {
+			self.modelView.update();
+		});
+		
 	};
 
 }
@@ -138,14 +169,110 @@ function Controller(modelView) {
 function ModelView() {
 	
 	this.eccentricity = 0;
-	this.semimajorAxis = 6371;
+	this.semimajorAxis = 6.671;
 	this.inclination = 0;
 	this.longtitudeAscendingNode = 0;
 	this.periapsisArgument = 0;
 	this.meanAnomaly = 0;
 	
-	this.addToScene = function() {
+	var self = this;
+	
+	var NUMBER_OF_VERTICES = 500
+	
+	var orbit;
+	var radius;
+	var body;
+	var planet;
+	
+	initOrbit();
+	initRadius();
+	initBody();
+	initPlanet();
+	
+	function initOrbit() {
+		var material = new THREE.LineBasicMaterial({color: "rgb(0, 0, 0)", linewidth: 2});
+		var geometry = new THREE.Geometry();
 		
+		for (var i = 0 ; i < NUMBER_OF_VERTICES ; i++) {
+			geometry.vertices.push(new THREE.Vector3(0, 0, 0));
+		}
+		
+		orbit = new THREE.Line(geometry, material);
+		
+		scene.add(orbit);
+	}
+	
+	function initRadius() {
+		var material = new THREE.LineBasicMaterial({color: "rgb(0, 0, 0)", linewidth: 3});
+		var geometry = new THREE.Geometry();
+		
+		geometry.vertices.push(new THREE.Vector3(0, 0, 0));
+		geometry.vertices.push(new THREE.Vector3(0, 0, 0));
+		
+		radius = new THREE.Line(geometry, material);
+		
+		scene.add(radius);
+	}
+	
+	function initBody() {
+		var geometry = new THREE.SphereGeometry(0.2, 32, 32);
+        var material = new THREE.MeshPhongMaterial({color: "rgb(255, 0, 0)"});
+        
+        body = new THREE.Mesh(geometry, material);	
+        
+        scene.add(body);
+	}
+	
+	function initPlanet() {
+		var geometry = new THREE.SphereGeometry(6.371, 32, 32);
+        var material = new THREE.MeshPhongMaterial({color: "rgb(200, 200, 200)", transparent: true, opacity: 0.2});
+        
+        planet = new THREE.Mesh(geometry, material);	
+        
+        scene.add(planet);		
+	}
+	
+	this.getOrbitalPosition = function(nu) {	
+		var a = this.semimajorAxis;
+		var e = this.eccentricity;
+		
+		var inc = this.inclination * Math.PI / 180;
+		var bigOmega = this.longtitudeAscendingNode * Math.PI / 180;
+		var omega = this.periapsisArgument * Math.PI / 180;		
+		
+		var r = a * (1 - e * e) / (1 + e * Math.cos(nu + omega));
+
+		var x = r * (Math.cos(nu + omega) * Math.cos(bigOmega) - Math.sin(nu + omega) * Math.cos(inc) * Math.sin(bigOmega));
+		var y = r * (Math.cos(nu + omega) * Math.sin(bigOmega) + Math.sin(nu + omega) * Math.cos(inc) * Math.cos(bigOmega));
+		var z = r * (Math.sin(nu + omega) * Math.sin(inc));	
+		
+		return [x, y, z];
+	};
+	
+	this.update = function() {		
+		for (var i = 0 ; i < NUMBER_OF_VERTICES ; i++) {
+			var nu =  2 * Math.PI / NUMBER_OF_VERTICES * i;
+			var orbitalPosition = this.getOrbitalPosition(nu);	
+
+			orbit.geometry.vertices[i].x = orbitalPosition[1];
+			orbit.geometry.vertices[i].y = orbitalPosition[2];
+			orbit.geometry.vertices[i].z = orbitalPosition[0];
+		}
+		
+		orbit.geometry.verticesNeedUpdate = true;
+		
+		var nu = this.meanAnomaly * Math.PI / 180;	
+		var orbitalPosition = this.getOrbitalPosition(nu);	
+
+		radius.geometry.vertices[1].x = orbitalPosition[1];
+		radius.geometry.vertices[1].y = orbitalPosition[2];
+		radius.geometry.vertices[1].z = orbitalPosition[0];
+
+		radius.geometry.verticesNeedUpdate = true;
+		
+		body.position.x = orbitalPosition[1];
+		body.position.y = orbitalPosition[2];
+		body.position.z = orbitalPosition[0];
 	};
 	
 }
