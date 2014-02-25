@@ -39,7 +39,7 @@ function initScene() {
 
 function initCamera() {
     camera = new THREE.PerspectiveCamera(55, width / height, 1, 100);
-    camera.position.set(12, 8, 12);   
+    camera.position.set(0, 10, 15);   
     
     cameraControls = new THREE.OrbitControls(camera, renderer.domElement);    
     cameraControls.noPan = false;
@@ -48,14 +48,15 @@ function initCamera() {
 
 
 function initLight() {
-    var light = new THREE.PointLight("rgb(255, 255, 255)");
+    var light = new THREE.HemisphereLight("rgb(255, 255, 255)", "rgb(255, 255, 255)", 1); 
     
-    light.position.set(0, 50, 10);
+    light.position.set(50, 5, 10);
     scene.add(light);        
 }
 
 
 function initReferenceView() {
+
 	var lineGeometryX = new THREE.Geometry();	
 	var lineMaterialX = new THREE.LineBasicMaterial({color: "rgb(255, 0, 0)", linewidth: 2});
 
@@ -137,7 +138,7 @@ function Controller(modelView) {
 			self.modelView.update();
 		});
 		
-		var inclinationControl = gui.add(self.modelView, 'inclination', 0, 180, 0.01);
+		var inclinationControl = gui.add(self.modelView, 'inclination', -180, 180, 0.01);
 		inclinationControl.name('i');
 		inclinationControl.onChange(function(value) {
 			self.modelView.update();
@@ -169,7 +170,7 @@ function Controller(modelView) {
 function ModelView() {
 	
 	this.eccentricity = 0;
-	this.semimajorAxis = 6.671;
+	this.semimajorAxis = 8;
 	this.inclination = 0;
 	this.longtitudeAscendingNode = 0;
 	this.periapsisArgument = 0;
@@ -178,6 +179,7 @@ function ModelView() {
 	var self = this;
 	
 	var NUMBER_OF_VERTICES = 500
+	var TO_RADIANS = Math.PI / 180;
 	
 	var orbit;
 	var radius;
@@ -190,7 +192,7 @@ function ModelView() {
 	initPlanet();
 	
 	function initOrbit() {
-		var material = new THREE.LineBasicMaterial({color: "rgb(0, 0, 0)", linewidth: 2});
+		var material = new THREE.LineBasicMaterial({color: "rgb(162, 73, 7)", linewidth: 3});
 		var geometry = new THREE.Geometry();
 		
 		for (var i = 0 ; i < NUMBER_OF_VERTICES ; i++) {
@@ -198,10 +200,11 @@ function ModelView() {
 		}
 		
 		orbit = new THREE.Line(geometry, material);
-		
+
 		scene.add(orbit);
 	};
 	
+
 	function initRadius() {
 		var material = new THREE.LineBasicMaterial({color: "rgb(0, 0, 0)", linewidth: 3});
 		var geometry = new THREE.Geometry();
@@ -216,7 +219,7 @@ function ModelView() {
 	
 	function initBody() {
 		var geometry = new THREE.SphereGeometry(0.2, 32, 32);
-        var material = new THREE.MeshPhongMaterial({color: "rgb(255, 0, 0)"});
+        var material = new THREE.MeshPhongMaterial({color: "rgb(162, 73, 7)"});
         
         body = new THREE.Mesh(geometry, material);	
         
@@ -224,9 +227,10 @@ function ModelView() {
 	};
 	
 	function initPlanet() {
+		var texture = THREE.ImageUtils.loadTexture('./image/earthmap1k.jpg');
 		var geometry = new THREE.SphereGeometry(6.371, 32, 32);
-        var material = new THREE.MeshPhongMaterial({color: "rgb(200, 200, 200)", transparent: true, opacity: 0.2});
-        
+		var material = new THREE.MeshLambertMaterial({map: texture});
+
         planet = new THREE.Mesh(geometry, material);	
         
         scene.add(planet);		
@@ -236,11 +240,11 @@ function ModelView() {
 		var a = this.semimajorAxis;
 		var e = this.eccentricity;
 		
-		var inc = this.inclination * Math.PI / 180;
-		var bigOmega = this.longtitudeAscendingNode * Math.PI / 180;
-		var omega = this.periapsisArgument * Math.PI / 180;		
+		var inc = this.inclination * TO_RADIANS;
+		var bigOmega = this.longtitudeAscendingNode * TO_RADIANS;
+		var omega = this.periapsisArgument * TO_RADIANS;		
 		
-		var r = a * (1 - e * e) / (1 + e * Math.cos(nu/* + omega*/));
+		var r = a * (1 - e * e) / (1 + e * Math.cos(nu));
 
 		var x = r * (Math.cos(nu + omega) * Math.cos(bigOmega) - Math.sin(nu + omega) * Math.cos(inc) * Math.sin(bigOmega));
 		var y = r * (Math.cos(nu + omega) * Math.sin(bigOmega) + Math.sin(nu + omega) * Math.cos(inc) * Math.cos(bigOmega));
@@ -250,6 +254,8 @@ function ModelView() {
 	};
 	
 	this.update = function() {
+				
+		var shape = new THREE.Shape();
 				
 		for (var i = 0 ; i < NUMBER_OF_VERTICES ; i++) {
 			var nu =  2 * Math.PI / NUMBER_OF_VERTICES * i;
@@ -262,7 +268,7 @@ function ModelView() {
 		
 		orbit.geometry.verticesNeedUpdate = true;
 		
-		var nu = this.meanAnomaly * Math.PI / 180;	
+		var nu = this.meanAnomaly * TO_RADIANS;	
 		var orbitalPosition = this.getOrbitalPosition(nu);	
 
 		radius.geometry.vertices[1].x = orbitalPosition[1];
