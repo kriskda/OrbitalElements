@@ -200,7 +200,7 @@ function ModelView() {
 		orbit = new THREE.Line(geometry, material);
 		
 		scene.add(orbit);
-	}
+	};
 	
 	function initRadius() {
 		var material = new THREE.LineBasicMaterial({color: "rgb(0, 0, 0)", linewidth: 3});
@@ -212,7 +212,7 @@ function ModelView() {
 		radius = new THREE.Line(geometry, material);
 		
 		scene.add(radius);
-	}
+	};
 	
 	function initBody() {
 		var geometry = new THREE.SphereGeometry(0.2, 32, 32);
@@ -221,7 +221,7 @@ function ModelView() {
         body = new THREE.Mesh(geometry, material);	
         
         scene.add(body);
-	}
+	};
 	
 	function initPlanet() {
 		var geometry = new THREE.SphereGeometry(6.371, 32, 32);
@@ -230,7 +230,7 @@ function ModelView() {
         planet = new THREE.Mesh(geometry, material);	
         
         scene.add(planet);		
-	}
+	};
 	
 	this.getOrbitalPosition = function(nu) {	
 		var a = this.semimajorAxis;
@@ -240,7 +240,7 @@ function ModelView() {
 		var bigOmega = this.longtitudeAscendingNode * Math.PI / 180;
 		var omega = this.periapsisArgument * Math.PI / 180;		
 		
-		var r = a * (1 - e * e) / (1 + e * Math.cos(nu + omega));
+		var r = a * (1 - e * e) / (1 + e * Math.cos(nu/* + omega*/));
 
 		var x = r * (Math.cos(nu + omega) * Math.cos(bigOmega) - Math.sin(nu + omega) * Math.cos(inc) * Math.sin(bigOmega));
 		var y = r * (Math.cos(nu + omega) * Math.sin(bigOmega) + Math.sin(nu + omega) * Math.cos(inc) * Math.cos(bigOmega));
@@ -249,7 +249,8 @@ function ModelView() {
 		return [x, y, z];
 	};
 	
-	this.update = function() {		
+	this.update = function() {
+				
 		for (var i = 0 ; i < NUMBER_OF_VERTICES ; i++) {
 			var nu =  2 * Math.PI / NUMBER_OF_VERTICES * i;
 			var orbitalPosition = this.getOrbitalPosition(nu);	
@@ -273,6 +274,7 @@ function ModelView() {
 		body.position.x = orbitalPosition[1];
 		body.position.y = orbitalPosition[2];
 		body.position.z = orbitalPosition[0];
+		
 	};
 	
 }
